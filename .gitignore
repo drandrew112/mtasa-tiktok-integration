@@ -1,0 +1,21 @@
+# --- Node / bridge ---
+bridge/node_modules/
+bridge/debug-samples.json
+bridge/run.log
+
+# --- local bridge config (contains your shared secret + optional API key) ---
+# Users copy bridge/config.example.json -> bridge/config.json
+bridge/config.json
+
+# --- logs ---
+*.log
+npm-debug.log*
+
+# --- archives / packaged resource ---
+*.zip
+
+# --- editor / OS ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

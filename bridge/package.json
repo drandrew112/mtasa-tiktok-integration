@@ -1,0 +1,14 @@
+{
+  "name": "tiktok-mta-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TikTok LIVE -> MTA:SA HTTP polling bridge (drandrew112)",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "^2.4.4"
+  }
+}

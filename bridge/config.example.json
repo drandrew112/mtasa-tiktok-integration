@@ -1,0 +1,11 @@
+{
+  "tiktokUsername": "TIKTOK_USERNAME_HERE",
+  "httpHost": "127.0.0.1",
+  "httpPort": 8085,
+  "sharedSecret": "CHANGE_ME_TO_A_RANDOM_STRING",
+  "bufferSize": 1000,
+  "reconnectDelayMs": 5000,
+  "signApiKey": "",
+  "debugSamples": false,
+  "enableExtendedGiftInfo": false
+}
