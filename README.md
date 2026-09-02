@@ -1,4 +1,4 @@
-# tiktok
+# MTA:SA Tiktok Integration
 
 TikTok LIVE → MTA:SA. Gifts / likes / follows in a TikTok live trigger in‑game
 events on one specific player (the streamer's character).
