@@ -18,7 +18,7 @@ HTTP endpoint once per second and turns the events into gameplay.
 
 - **Node.js 18+** (for the bridge)
 - **MTA:SA server 1.5.9+** (server‑side `createProjectile` and `setElementAngularVelocity` are used)
-- The **`ui_core`** resource (for on‑screen notifications) — the meta declares
+- The [**`ui_core`**](https://community.multitheftauto.com/index.php?p=resources&s=details&id=19072) resource (for on‑screen notifications) — the meta declares
   `<include resource="ui_core" />`
 - A machine that runs the bridge next to the MTA server (they talk over `127.0.0.1`)
 - Optional but recommended: an [EulerStream](https://www.eulerstream.com/) sign
