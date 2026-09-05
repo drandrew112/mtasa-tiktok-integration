@@ -153,7 +153,8 @@ in the MTA server console (make sure `ui_core` is also running).
 | `server/config.lua` | settings, `TikTok.log`, `TikTok.getTargetPlayer()`, `TARGET_PLAYER_NAME` |
 | `server/poller.lua` | HTTP poll → `TikTok.dispatch` |
 | `server/dispatch.lua` | event → `onTikTok*` trigger |
-| `server/gift_handler.lua` | **gift → action** (`GIFT_ACTIONS`) |
+| `server/actions.lua` | **central action registry** `TikTok.actions` (`act_*`); `TikTok.runAction(name, ctx)` — every gift/like/follow action lives here, incl. the `act_train_*` set |
+| `server/gift_handler.lua` | **gift → action** (`GIFT_ACTIONS` by name **or** `GIFT_ACTIONS_BY_COIN` by coin worth — `Tiktok.giftHandlerType`) |
 | `server/like_handler.lua` | like burst + milestone actions |
 | `server/follower_handler.lua` | follow → action |
 | `server/enemies.lua` | `TikTok.spawnEnemies` / `clearEnemies` (ped AI is client‑side: `client/enemy_ai.lua`) |
@@ -165,16 +166,24 @@ in the MTA server console (make sure `ui_core` is also running).
 | `client/hud_timers.lua` | bottom‑center: "TANK SPAWN" / "ENEMY WAVE" countdown |
 | `client/hud_legend.lua` | top‑left: what each gift/like does (viewer overlay). Off by default (`enableLegend`). |
 | `client/gift_effects.lua` | black hole gravity + smoke grenades (client) |
+| `client/train_control.lua` | routes `act_train_speed_150` / `act_train_chgDirection` to the client‑side `ai_autoplayer` exports |
 | `server/example.lua` | logs events when `*debug` is `true`; safe to delete |
 
 ---
 
 ## 4. What the events do
 
-### Gift → action (`server/gift_handler.lua` : `GIFT_ACTIONS`)
+### Gift → action (`server/gift_handler.lua`)
 
-The **gift name** (lowercased) decides. No categories. A value can be one
-function or `{ fn1, fn2 }` (random one of the two).
+`Tiktok.giftHandlerType` (in `shared/lists.lua`) picks the matching mode:
+
+- `"giftname"` (default) — the **gift name** (lowercased) decides, via `GIFT_ACTIONS`
+  (or `GIFT_ACTIONS_BY_ID`).
+- `"coin"` — the gift's **coin worth** decides, via `GIFT_ACTIONS_BY_COIN`: the tier
+  with the highest `coins` value `<=` the worth wins.
+
+A mapped value can be one action, `{ fn1, fn2 }` (random one), or an action **name**
+string (`"act_dropVehicle"`). Actions come from `TikTok.actions` (`server/actions.lua`).
 
 | Gift | ~coins | Action |
 |---|---|---|
@@ -256,6 +265,30 @@ addEventHandler("onTikTokGift", root, function(data) ... end)
 
 Every `data.user` = `{ userId, uniqueId, nickname, profilePicture }`.
 
+### Action registry (`server/actions.lua`)
+
+Every effect is a named function in `TikTok.actions` and can be fired from any
+handler (or test command) with `TikTok.runAction("<name>", ctx)`. `ctx.player` is
+the affected player, `ctx.senderName` the TikTok user.
+
+- **Existing:** `act_replaceVehicle`, `act_dropVehicle`, `act_liftVehicle`,
+  `act_spawnEnemy`, `act_spawnEnemyCar`, `act_planeCrash`, `act_teleportAirport`,
+  `act_blackhole`, `act_launchVehicleOrKill`, `act_spawnVehiclesAround`,
+  `act_randomVehicleColor`, `act_smokeGrenades`, `act_explodeVehicle`
+- **Train** (obstacles a fixed distance ahead of the player's vehicle — not wired
+  to any event yet, tune with `Tiktok.train`):
+  `act_train_spawnVeh_Avg` / `_Avg_5` / `_Avg_10` (`avg_vehicles`),
+  `act_train_spawnVeh_Heavy` / `_Heavy_5` / `_Heavy_10` (`heavy_vehicles`),
+  `act_train_spawnVeh_Tank` / `_Tank_5`,
+  `act_train_spawnPed` / `_5` / `_10`,
+  `act_train_speed_150` (bump `setTrainAutoSpeed` 150 → 80 after 10 s),
+  `act_train_chgDirection` (`setTrainDirection` flip — reverse the train),
+  `act_train_chaos` (all of the above, staggered)
+
+  `act_train_speed_150` is routed to the target's client (`client/train_control.lua`)
+  because the `ai_autoplayer` speed export is client-side; `act_train_chgDirection`
+  runs server-side `setTrainDirection` (ai_autoplayer's `train.lua` follows it).
+
 **Gift streaks:** a streakable gift (`giftType == 1`) fires multiple times;
 `final == true` only on the settled event. For a one‑time reward:
 `if not data.final then return end`.
@@ -274,7 +307,9 @@ exports.tiktok:getTikTokStatus()   -- { live, bridgeUrl, pollInterval, debug }
 | Command | What |
 |---|---|
 | `/tiktokgift <name>` | fake gift (e.g. `/tiktokgift rose`); no argument lists the mapped gifts |
+| `/tiktokgiftcoin <coins>` | fake a gift worth `<coins>` (coin mode) |
 | `/tiktokgiftall` | run every mapped gift, one after another |
+| `/tiktokaction [name]` | fire any registered action on the target player (`act_` prefix optional, e.g. `/tiktokaction train_chaos`); no argument lists them |
 | `/tiktoklike <n>` | jump total likes to n (milestones) |
 | `/tiktoklikeadd <n>` | add n likes |
 | `/tiktoklikeburst <n>` | one like event with batch size n (burst acts) |
@@ -291,9 +326,12 @@ exports.tiktok:getTikTokStatus()   -- { live, bridgeUrl, pollInterval, debug }
 
 | What | Where |
 |---|---|
-| Gift → action mapping | `server/gift_handler.lua` : `GIFT_ACTIONS` / `GIFT_ACTIONS_BY_ID` |
-| Black hole height / duration / pull | `server/gift_handler.lua` top |
-| Plane impact distance | `server/gift_handler.lua` : `PLANE_IMPACT_DIST` |
+| Gift matching mode | `shared/lists.lua` : `Tiktok.giftHandlerType` (`"giftname"` / `"coin"`) |
+| Gift → action mapping | `server/gift_handler.lua` : `GIFT_ACTIONS` / `GIFT_ACTIONS_BY_ID` / `GIFT_ACTIONS_BY_COIN` |
+| Action bodies (all `act_*`) | `server/actions.lua` |
+| Black hole height / duration / pull | `server/actions.lua` top |
+| Plane impact distance | `server/actions.lua` : `PLANE_IMPACT_DIST` |
+| Train actions (distance, `avg_vehicles` / `heavy_vehicles` / `skins` lists, `tank`, speed) | `shared/lists.lua` : `Tiktok.train` |
 | Like burst ranges / milestones | `server/like_handler.lua` : `LIKE_BURST_ACTS`, `INTERVAL_ACTS`, `MILESTONE_ACTS` |
 | Like counting mode | `server/like_handler.lua` : `COUNT_MODE` (`session` / `absolute`) |
 | Enemy count cap / lifetime / spawn radius | `server/enemies.lua` top |

@@ -5,10 +5,9 @@
 
     ACT SYSTEM
     ----------
-    1. Write an act function:            local function act_something(ctx) ... end
-    2. Put it in the right table:
-         MILESTONE_ACTS[<value>] = { act_something, ... }  -- ONCE, at an exact total
-         INTERVAL_ACTS[<step>]   = { act_something, ... }   -- REPEATING, every <step> likes
+    Actions live in server/actions.lua (TikTok.actions). Reference them here:
+         MILESTONE_ACTS[<value>] = { A.act_something, ... }  -- ONCE, at an exact total
+         INTERVAL_ACTS[<step>]   = { A.act_something, ... }   -- REPEATING, every <step> likes
        Table values are always a LIST -> the code picks one at random.
 
     ctx fields: milestone, total, likeCount, rawTotal, senderName, senderId,
@@ -34,96 +33,10 @@ local MAX_CATCHUP      = 50      -- max repeating milestones fired at once (big-
 local NOTIFY_MILESTONE = true    -- automatic ui_core notification on every milestone
 
 -- ===========================================================================
---  ACTS   (function(ctx) ... end)
+--  ACTS   -  all live in server/actions.lua now (TikTok.actions)
 -- ===========================================================================
 
-local function playerVehicle(player)
-    local v = isElement(player) and getPedOccupiedVehicle(player)
-    return isElement(v) and v or nil
-end
-
--- Launch the player's vehicle up; if they have no vehicle, kill them.
-local function act_launchVehicleOrKill(ctx)
-    local player = ctx.player
-    if not isElement(player) then return end
-
-    local veh = playerVehicle(player)
-    if veh then
-        local vx, vy, vz = getElementVelocity(veh)
-        setElementVelocity(veh, vx, vy, vz + 0.75)                     -- upward shove
-        local rx, ry, rz = getElementRotation(veh)
-        setElementRotation(veh, rx, ry, rz + math.random(-30, 30))     -- small spin for looks
-    else
-        killPed(player)
-    end
-end
-
--- 4 random vehicles around the player (N/S/E/W)
-local SPAWN_AROUND_DIST    = 6      -- units from the player
-local SPAWN_AROUND_CLEANUP = 120000 -- ms until removed (0 = keep)
-
-local function act_spawnVehiclesAround(ctx)
-    local player = ctx.player
-    if not isElement(player) then return end
-
-    local x, y, z = getElementPosition(player)
-    local offsets = {
-        {  SPAWN_AROUND_DIST, 0 },
-        { -SPAWN_AROUND_DIST, 0 },
-        { 0,  SPAWN_AROUND_DIST },
-        { 0, -SPAWN_AROUND_DIST },
-    }
-
-    for _, o in ipairs(offsets) do
-        local veh = createVehicle(TikTok.randomVehicleModel(), x + o[1], y + o[2], z + 1, 0, 0, math.random(0, 359))
-        if isElement(veh) and SPAWN_AROUND_CLEANUP > 0 then
-            setTimer(function()
-                if isElement(veh) then destroyElement(veh) end
-            end, SPAWN_AROUND_CLEANUP, 1)
-        end
-    end
-end
-
--- Skin list / random skin: shared/lists.lua (TikTok.randomSkin)
-
--- In a vehicle -> all 4 vehicle colors random. On foot -> random player skin.
-local function act_randomVehicleColor(ctx)
-    local player = ctx.player
-    if not isElement(player) then return end
-
-    local veh = playerVehicle(player)
-    if veh then
-        local function c() return math.random(0, 255) end
-        setVehicleColor(veh, c(), c(), c(),  c(), c(), c(),  c(), c(), c(),  c(), c(), c())
-    else
-        setElementModel(player, TikTok.randomSkin())
-    end
-end
-
--- Smoke / teargas grenades on the player.
--- (server-side createProjectile is unreliable -> the client does it,
---  see client/gift_effects.lua : tiktok:smokeGrenades)
-local SMOKE_COUNT = 5
-local function act_smokeGrenades(ctx)
-    local player = ctx.player
-    if not isElement(player) then return end
-    triggerClientEvent(player, "tiktok:smokeGrenades", resourceRoot, SMOKE_COUNT)
-end
-
--- Chasing enemy ped named after the liker (enemies.lua). Reusable as an act anywhere.
-local function act_spawnEnemy(ctx)
-    TikTok.spawnEnemies(ctx.player, 1, ctx.senderName)
-end
-
--- In a vehicle -> the vehicle explodes. On foot -> kill the player.
-local function act_explodeVehicle(ctx)
-    local veh = playerVehicle(ctx.player)
-    if veh then
-        blowVehicle(veh)
-    else
-        killPed(ctx.player)
-    end
-end
+local A = TikTok.actions or {}
 
 -- ===========================================================================
 --  MILESTONE TABLES   ([value] = { act, act, ... })
@@ -132,24 +45,28 @@ end
 -- By a single LIKE EVENT's batch size (data.likeCount). First match wins.
 -- (TikTok batches likes; a batch this big is rare but happens.)
 local LIKE_BURST_ACTS = {
-    { min = 1,  max = 4,  acts = { act_randomVehicleColor } },
-    { min = 5,  max = 10, acts = { act_smokeGrenades } },
-    { min = 11, max = 20, acts = { act_spawnEnemy } },
+    --{ min = 1,  max = 4,  acts = { A.act_randomVehicleColor } },
+    --{ min = 5,  max = 10, acts = { A.act_smokeGrenades } },
+    --{ min = 11, max = 20, acts = { A.act_spawnEnemy } },
+    { min = 1,  max = 4,  acts = { A.act_train_spawnVeh_Avg,   A.act_train_spawnPed } },
+    { min = 5,  max = 9,  acts = { A.act_train_spawnVeh_Heavy, A.act_train_spawnPed_5 } },
+    { min = 10, max = 19, acts = { A.act_train_spawnVeh_Tank,  A.act_train_spawnPed_10 } },
 }
 
 -- Fired once, at EXACT total-like values:
 local MILESTONE_ACTS = {
-    -- [1000] = { act_spawnVehiclesAround },
+    -- [1000] = { A.act_spawnVehiclesAround },
     -- [5000]  = { ... },
     -- [10000] = { ... },
 }
 
 -- REPEATING, every N likes:
 local INTERVAL_ACTS = {
-    [1000]  = { act_spawnVehiclesAround },
-    [5000]  = { act_launchVehicleOrKill },
-    [10000] = { act_explodeVehicle },   -- in a vehicle -> explodes
-    -- [100]  = { act_spawnEnemy },
+    [100]  = { A.act_train_spawnPed },
+    [1000]  = { A.act_spawnVehiclesAround },
+    [5000]  = { A.act_train_spawnVeh_Tank_5 },
+    --[5000]  = { A.act_launchVehicleOrKill },
+    --[10000] = { A.act_explodeVehicle },   -- in a vehicle -> explodes
 }
 
 -- ---------------------------------------------------------------------------

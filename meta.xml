@@ -14,6 +14,7 @@
     <script src="server/exports.lua"          type="server" />
     <script src="server/enemies.lua"          type="server" />
     <script src="server/enemy_cars.lua"       type="server" />
+    <script src="server/actions.lua"          type="server" />
     <script src="server/gift_handler.lua"     type="server" />
     <script src="server/like_handler.lua"     type="server" />
     <script src="server/follower_handler.lua" type="server" />
@@ -29,6 +30,7 @@
     <script src="client/enemy_car_ai.lua"  type="client" />
     <script src="client/hud_timers.lua"    type="client" />
     <script src="client/hud_legend.lua"    type="client" />
+    <script src="client/train_control.lua" type="client" />
 
     <export function="isTikTokLive"    type="server" />
     <export function="getTikTokStatus" type="server" />

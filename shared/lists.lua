@@ -14,6 +14,14 @@
 ]]
 
 TikTok = TikTok or {}
+Tiktok = Tiktok or TikTok   -- alias: some scripts use the lowercase-k spelling
+
+Tiktok.enableTimers = false   -- set to false to disable the vehicle / enemy timers (for testing)
+
+-- Which gift -> action mapping the gift handler uses:
+--   "giftname" -> match by gift NAME   (server/gift_handler.lua : GIFT_ACTIONS)
+--   "coin"     -> match by COIN worth  (server/gift_handler.lua : GIFT_ACTIONS_BY_COIN)
+Tiktok.giftHandlerType = "giftname"
 
 -- ---------------------------------------------------------------------------
 -- Random names (enemy peds / enemy car driver)
@@ -60,7 +68,7 @@ end
 --  IMPORTANT: one gang only, otherwise the peds shoot each other
 --  (rival gangs -> GTA relationship -> friendly fire). 102-104 = Ballas.
 -- ---------------------------------------------------------------------------
-TikTok.ENEMY_MODELS  = { 102, 103, 104 }
+TikTok.ENEMY_MODELS  = { 101, 102, 103, 104 }
 TikTok.ENEMY_WEAPONS = { 28, 29, 32 }   -- Uzi, MP5, Tec9 (full-auto -> continuous fire)
 
 -- ---------------------------------------------------------------------------
@@ -101,3 +109,39 @@ function TikTok.randomSkin()
     repeat s = math.random(0, 312) until not TikTok.BAD_SKINS[s]
     return s
 end
+
+-- ---------------------------------------------------------------------------
+-- "Train" actions (server/actions.lua : act_train_*)
+--   Obstacles dropped a fixed distance in FRONT of the player's vehicle.
+--   None of these are wired to an event yet - fire them with /tiktokaction.
+-- ---------------------------------------------------------------------------
+Tiktok.train = {
+    -- units in front of the player per spawn step; the _5 / _10 variants place
+    -- each successive vehicle/ped one more `distance` further ahead.
+    distance = 10,
+
+    -- average sized vehicles for act_train_spawnVeh_Avg*
+    avg_vehicles = {
+        445, 466, 492, 546, 547, 405, 550, 566, 517, 507,
+        585, 419, 526, 491, 421, 529, 458, 542, 518, 527,
+    },
+
+    -- heavy vehicles for act_train_spawnVeh_Heavy* (NO tank here - the tank
+    -- actions use `tank` below).
+    heavy_vehicles = {
+        403, 514, 515, 455, 456, 433, 578, 406, 408, 443, 431, 437, 524,
+    },
+
+    tank = 432,   -- Rhino (act_train_spawnVeh_Tank*)
+
+    -- ped skins for act_train_spawnPed*
+    skins = { 0, 7, 23, 29, 60, 105, 126, 162, 230, 249 },
+
+    -- ms until a train-spawned vehicle / ped is auto-removed (0 = keep forever)
+    cleanup = 30000,
+
+    -- act_train_speed_150 (exports.ai_autoplayer:setTrainAutoSpeed)
+    speedBoost         = 150,
+    speedNormal        = 80,
+    speedBoostDuration = 10000,   -- ms before it drops back to speedNormal
+}

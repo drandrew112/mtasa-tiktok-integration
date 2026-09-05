@@ -3,7 +3,8 @@
     --------------------
     TikTok follow (onTikTokFollow) -> act.
 
-    ACT SYSTEM (same as the gift/like handler): FOLLOW_ACTS list, one picked at random.
+    ACT SYSTEM (same as the gift/like handler): FOLLOW_ACTS list, one picked at
+    random. Actions live in server/actions.lua (TikTok.actions).
     Default: spawn 1 chasing enemy ped OR 1 chasing enemy car.
 
     ctx fields: player, senderName, senderId, raw, test
@@ -11,22 +12,12 @@
     Test:  /tiktokfollow
 ]]
 
-local ENEMIES_PER_FOLLOW = 1
-
--- ---------------------------------------------------------------------------
--- Acts
--- ---------------------------------------------------------------------------
-local function act_spawnEnemy(ctx)
-    TikTok.spawnEnemies(ctx.player, ENEMIES_PER_FOLLOW, ctx.senderName)
-end
-
-local function act_spawnEnemyCar(ctx)
-    TikTok.spawnEnemyCar(ctx.player, ctx.senderName)
-end
+local A = TikTok.actions or {}
 
 local FOLLOW_ACTS = {
-    act_spawnEnemy,
-    act_spawnEnemyCar,
+    --A.act_spawnEnemy,
+    --A.act_spawnEnemyCar,
+    A.act_train_speed_150
     -- add more acts here...
 }
 

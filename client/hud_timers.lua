@@ -37,6 +37,7 @@ local function bigText(text, y, r, g, b)
 end
 
 addEventHandler("onClientRender", root, function()
+    if not Tiktok.enableTimers then return end
     if not vehDeadline then return end
     local now = getTickCount()
     local lh  = dxGetFontHeight(SCALE, FONT)

@@ -72,9 +72,11 @@ local function giveEnemies()
     broadcast()
 end
 
-setTimer(giveVehicle, VEHICLE_EVERY, 0)
-setTimer(giveEnemies, ENEMY_EVERY, 0)
-setTimer(broadcast, 30000, 0)   -- safety re-send for the HUD
+if Tiktok.enableTimers then
+    setTimer(giveVehicle, VEHICLE_EVERY, 0)
+    setTimer(giveEnemies, ENEMY_EVERY, 0)
+    setTimer(broadcast, 30000, 0)   -- safety re-send for the HUD
+end
 
 -- client asks for the current state on connect
 addEvent("tiktok:spawnTimersReq", true)
